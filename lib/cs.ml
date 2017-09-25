@@ -8,7 +8,6 @@ let of_string = Cstruct.of_string
 let equal = Cstruct.equal
 let sub = Cstruct.sub
 let len = Cstruct.len (* TODO consider returning Usane.Uint64.t *)
-let of_string = Cstruct.of_string
 let create = Cstruct.create
 let blit = Cstruct.blit
 let concat = Cstruct.concat (*TODO wrap exceptions *)
@@ -106,7 +105,6 @@ module BE = struct
     Cstruct.BE.set_uint32 buf 0 int32 ; buf
 
   let e_get_ptimespan32 (e:'e) buf offset : (Ptime.span, 'e) result =
-    (** [e_get_ptime32 e buf offset] is the big-endian UNIX timestamp contained in [buf] at [offset], or [Error e] *)
     e_get_uint32 e buf offset
     >>| Int32.to_int >>| Ptime.Span.of_int_s
 
@@ -142,7 +140,7 @@ let to_list buf =
   let s = to_string buf in
   let rec loop acc = function
     | -1 -> acc
-    | i -> loop (s.[i]::acc) (pred i)
+    | i -> (loop[@tailcall]) (s.[i]::acc) (pred i)
   in loop [] (String.length s -1)
 
 let of_list (lst : char list) =
@@ -171,7 +169,7 @@ let index_opt b ?(max_offset) ?(offset=0) c : int option =
   let rec s = function
     | i when i >= max -> None
     | i when Cstruct.get_char b i = c -> Some i
-    | i -> s (i + 1)
+    | i -> (s[@tailcall]) (i + 1)
   in
   s offset
 
@@ -204,7 +202,7 @@ let find b ?(max_offset) ?(offset=0) needle =
           if Cstruct.(equal (sub b c_off needle_len) needle) then
             Some c_off
           else
-            next (i + 1)
+            (next[@tailcall]) (i + 1)
       end
     in
     next offset
@@ -217,9 +215,9 @@ let strip_leading_char c buf : t =
   let rec loop offset =
     let max_offset = offset + 1 in
     match index buf ~offset ~max_offset c with
-    | Ok _ -> loop max_offset
+    | Ok _ -> (loop[@tailcall]) max_offset
     | Error _ ->
-      e_split `Cstruct_invalid_argument buf offset
+      e_split (`Msg "Cstruct_invalid_argument") buf offset
       |> R.get_ok
       |> fun (_, tl) -> tl
   in

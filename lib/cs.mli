@@ -46,6 +46,9 @@ module BE :
     val create_uint32 : Usane.Uint32.t -> t
     val e_get_ptimespan32 :
       'error -> t -> int -> (Ptime.span, 'error) result
+    (** [e_get_ptime32 e buf offset] is the big-endian UNIX timestamp contained
+        in [buf] at [offset], or [Error e] *)
+
     val e_get_ptime32 :
       'error -> t -> int -> (Ptime.t, 'error) result
     val e_set_ptimespan32 :
