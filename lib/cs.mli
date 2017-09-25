@@ -91,6 +91,7 @@ module W :
     val char : t -> char -> unit
     val cs : t -> ?offset:int -> ?len:int -> Cstruct.t -> unit
     val uint16 : t -> Usane.Uint16.t -> unit
+    val uint32 : t -> Usane.Uint32.t -> unit
     val str : t -> ?offset:int -> ?len:int -> string -> unit
     val e_ptime32 :
       'error -> t -> Ptime.t -> (t, 'error) result

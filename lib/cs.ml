@@ -302,6 +302,7 @@ module W = struct
     Cstruct.blit src offset !t (increase t src_len) src_len
 
   let uint16 t i = cs t (BE.create_uint16 i)
+  let uint32 t i = cs t (BE.create_uint32 i)
 
   let str t ?(offset=0) ?len src =
     let src_len = min_len (`Str src) len in
