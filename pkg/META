@@ -1,0 +1,8 @@
+description = "Cstruct wrappers with result types"
+version = "%%VERSION_NUM%%"
+requires = "cstruct hex ptime rresult"
+archive(byte) = "cs.cma"
+plugin(byte) = "cs.cma"
+archive(native) = "cs.cmxa"
+plugin(native) = "cscxms"
+exists_if = "cs.cma"

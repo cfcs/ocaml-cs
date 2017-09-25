@@ -1,0 +1,36 @@
+opam-version: "1.2"
+maintainer: "root@localhost"
+authors: [ "none" ]
+license: "gopher://license.to.kill"
+homepage: "https://github.com/cfcs/ocaml-cs"
+dev-repo: "https://github.com/cfcs/ocaml-cs.git"
+bug-reports: "https://github.com/cfcs/ocaml-cs/issues"
+
+available: [ ocaml-version >= "4.04.0" & os != "windows" ]
+
+build: [
+  [ "ocaml" "pkg/pkg.ml" "build" "--pinned" "%{pinned}%" "--tests" "false" ]
+]
+build-test: [
+  [ "ocaml" "pkg/pkg.ml" "build" "--pinned" "%{pinned}%" "--tests" "true" ]
+  [ "ocaml" "pkg/pkg.ml" "test" ]
+]
+
+depends: [
+  "ocamlbuild" {build}
+  "ocamlfind" {build}
+  "topkg" {build}
+  "odoc" {build & doc}
+  "qcheck" {test}
+  "alcotest" {test}
+  "logs"
+  "cstruct"
+  "usane"
+  "hex"
+  "rresult"
+  "fmt"
+  "ptime"
+]
+
+depopts: [
+]
