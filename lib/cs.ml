@@ -6,14 +6,17 @@ type t = Cstruct.t
 let to_string = Cstruct.to_string
 let of_string = Cstruct.of_string
 let equal = Cstruct.equal
-let sub = Cstruct.sub
+let sub_unsafe = Cstruct.sub
 let len = Cstruct.len (* TODO consider returning Usane.Uint64.t *)
 let create = Cstruct.create
 let blit = Cstruct.blit
 let concat = Cstruct.concat (*TODO wrap exceptions *)
 let set_uint8 = Cstruct.set_uint8
+let get_uint8_unsafe buf offset = Cstruct.get_uint8 buf offset
 
-let of_char c = String.make 1 c |> of_string
+let init len f = String.init len f |> of_string
+let make len c = String.make len c |> of_string
+let of_char c = make 1 c
 
 let dup {Cstruct.buffer ; len ; off} =
   let kind , layout , dim = Bigarray.Array1.(kind, layout, dim) in
@@ -37,16 +40,15 @@ let wrap_f_buf_offset f buf offset =
 let wrap_err errval res =
   res |> R.reword_error (function _ -> errval)
 
-let get_uint8_unsafe buf offset = Cstruct.get_uint8 buf offset
 let get_uint8 = wrap_f_buf_offset get_uint8_unsafe
 
 let e_get_uint8 e buf offset = wrap_err e  (get_uint8 buf offset)
 
-let sub_result cstr off len =
-  wrap_invalid_argument (fun () -> Cstruct.sub cstr off len)
+let sub cstr off len =
+  wrap_invalid_argument (fun () -> sub_unsafe cstr off len)
 
 let e_sub e cstr off len =
-  wrap_err e (sub_result cstr off len)
+  wrap_err e (sub cstr off len)
 
 let split_result ?(start=0) buf len =
   wrap_invalid_argument (fun () -> Cstruct.split ~start buf len)
@@ -199,7 +201,7 @@ let find b ?(max_offset) ?(offset=0) needle =
       begin match index_opt ~max_offset ~offset:i b first_needle with
         | None -> None
         | Some c_off ->
-          if Cstruct.(equal (sub b c_off needle_len) needle) then
+          if Cstruct.(equal (sub_unsafe b c_off needle_len) needle) then
             Some c_off
           else
             (next[@tailcall]) (i + 1)
@@ -255,16 +257,16 @@ let e_find_string_list e str_list buf : (string,'error) result=
 let next_line ?max_length buf : [> `Last_line of t | `Next_tuple of t*t] =
   begin match index_opt ?max_offset:max_length buf '\n' with
     | None -> `Last_line buf
-    | Some 0 -> `Next_tuple (Cstruct.create 0 , Cstruct.sub buf 1 (len buf -1))
+    | Some 0 -> `Next_tuple (Cstruct.create 0 , sub_unsafe buf 1 (len buf -1))
     | Some n_idx when Cstruct.get_char buf (n_idx-1) = '\r' ->
       `Next_tuple (
-        Cstruct.sub buf 0 (n_idx-1),
-        Cstruct.sub buf (n_idx+1) (len buf -n_idx-1)
+        sub_unsafe buf 0 (n_idx-1),
+        sub_unsafe buf (n_idx+1) (len buf -n_idx-1)
       )
     | Some n_idx ->
       `Next_tuple (
-        Cstruct.sub buf 0 n_idx ,
-        Cstruct.sub buf (n_idx+1) (len buf - n_idx-1)
+        sub_unsafe buf 0 n_idx ,
+        sub_unsafe buf (n_idx+1) (len buf - n_idx-1)
       )
   end
 

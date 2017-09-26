@@ -2,10 +2,12 @@ open Rresult
 type t = Cstruct.t
 
 val to_string : t -> string
+val of_string : ?allocator:(int -> t) -> string -> t
+val init : int -> (int -> char) -> t
+val make : int -> char -> t
 val equal : t -> t -> bool
 val sub : t -> int -> int -> t
 val len : t -> int
-val of_string : ?allocator:(int -> t) -> string -> t
 val create : int -> t
 val blit : t -> int -> t -> int -> int -> unit
 val concat : t list -> t
@@ -15,7 +17,8 @@ val dup : t -> t
 val get_uint8_unsafe : t -> int -> Usane.Uint8.t
 val get_uint8 : t -> int -> (Usane.Uint8.t, [> R.msg ]) result
 val e_get_uint8 : 'error -> t -> int -> (Usane.Uint8.t, 'error) result
-val sub_result : t -> int -> int -> (t, [> R.msg ]) result
+val sub_unsafe : t -> int -> int -> t
+val sub : t -> int -> int -> (t, [> R.msg ]) result
 val e_sub : 'error -> t -> int -> int -> (t, 'error) result
 val split_result : ?start:int -> t -> int -> (t * t, [> R.msg ]) result
 val e_split : ?start:int -> 'error -> t -> int -> (t * t, 'error) result
