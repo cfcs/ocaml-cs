@@ -21,14 +21,11 @@ depends: [
   "ocamlfind" {build}
   "topkg" {build}
   "odoc" {build & doc}
-  "qcheck" {test}
   "alcotest" {test}
-  "logs"
   "cstruct"
   "usane"
   "hex"
   "rresult"
-  "fmt"
   "ptime"
 ]
 

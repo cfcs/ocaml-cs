@@ -12,7 +12,8 @@ val concat : t list -> t
 val set_uint8 : t -> int -> Usane.Uint8.t -> unit
 val of_char : char -> t
 val dup : t -> t
-val get_uint8_result : t -> int -> (Usane.Uint8.t, [> R.msg ]) result
+val get_uint8_unsafe : t -> int -> Usane.Uint8.t
+val get_uint8 : t -> int -> (Usane.Uint8.t, [> R.msg ]) result
 val e_get_uint8 : 'error -> t -> int -> (Usane.Uint8.t, 'error) result
 val sub_result : t -> int -> int -> (t, [> R.msg ]) result
 val e_sub : 'error -> t -> int -> int -> (t, 'error) result

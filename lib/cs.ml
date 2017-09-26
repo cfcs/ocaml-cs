@@ -37,10 +37,10 @@ let wrap_f_buf_offset f buf offset =
 let wrap_err errval res =
   res |> R.reword_error (function _ -> errval)
 
-let get_uint8_result buf offset =
-  wrap_f_buf_offset Cstruct.get_uint8 buf offset
+let get_uint8_unsafe buf offset = Cstruct.get_uint8 buf offset
+let get_uint8 = wrap_f_buf_offset get_uint8_unsafe
 
-let e_get_uint8 e buf offset = wrap_err e  (get_uint8_result buf offset)
+let e_get_uint8 e buf offset = wrap_err e  (get_uint8 buf offset)
 
 let sub_result cstr off len =
   wrap_invalid_argument (fun () -> Cstruct.sub cstr off len)

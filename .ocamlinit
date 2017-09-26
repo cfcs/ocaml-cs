@@ -1,6 +1,4 @@
-#require "fmt.top"
 #require "hex"
-#require "logs.top"
 #require "ptime.clock.os.top"
 #require "rresult.top"
 #require "usane"

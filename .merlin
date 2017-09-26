@@ -1,7 +1,7 @@
 S lib
 B _build/lib
 
-PKG cstruct hex logs rresult usane
+PKG cstruct hex rresult usane
 PKG topkg
 
 PKG ptime
