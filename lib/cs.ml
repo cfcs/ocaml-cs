@@ -85,6 +85,11 @@ module BE = struct
   let e_get_uint32 e buf offset =
     wrap_err e (get_uint32 buf offset)
 
+  let get_uint64 buf offset =
+    wrap_f_buf_offset Cstruct.BE.get_uint64 buf offset
+  let e_get_uint64 e buf offset =
+    wrap_err e (get_uint64 buf offset)
+
   let set_uint16 (buf:t) (offset:int) (int16 : Usane.Uint16.t)
     : (Cstruct.t,[> `Msg of string]) result =
     wrap_invalid_argument (fun () ->
@@ -102,9 +107,14 @@ module BE = struct
         Cstruct.BE.set_uint32 buf offset int32; buf)
   let e_set_uint32 e buf offset int32 =
     wrap_err e (set_uint32 buf offset int32)
+
   let create_uint32 (int32 : Usane.Uint32.t) =
     let buf = Cstruct.create 4 in
     Cstruct.BE.set_uint32 buf 0 int32 ; buf
+
+  let create_uint64 (int64 : Usane.Uint64.t) =
+    let buf = Cstruct.create 8 in
+    Cstruct.BE.set_uint64 buf 0 int64 ; buf
 
   let e_get_ptimespan32 (e:'e) buf offset : (Ptime.span, 'e) result =
     e_get_uint32 e buf offset
@@ -129,6 +139,47 @@ module BE = struct
   let e_create_ptimespan32 e = e_set_ptimespan32 e (create 4) 0
   let e_create_ptime32 e = e_set_ptime32 e (create 4) 0
 end
+
+let two_pow_62 = 0x4_000_000_000_000_000L (*no Int64.pow - wtf?*)
+
+let create_tai64_of_ptime time =
+  let days, picoseconds = Ptime.to_span time |> Ptime.Span.to_d_ps in
+  let seconds = Int64.div picoseconds 1000_000_000_000L in
+  Int64.add two_pow_62
+    (Int64.add seconds
+              (Int64.mul 86400L (Int64.of_int days)))
+  |> BE.create_uint64
+
+let create_tai64_n_of_ptime time =
+  let _, picoseconds = Ptime.to_span time |> Ptime.Span.to_d_ps in
+  let nanosec = Int64.div (Int64.rem picoseconds 1000_000_000_000L) 1000L
+             |> Int64.to_int32 in
+  concat [create_tai64_of_ptime time; BE.create_uint32 nanosec]
+
+let e_ptime_of_tai64 e buf =
+  BE.e_get_uint64 e buf 0 >>= fun raw_int64 ->
+  if  raw_int64 < Int64.add two_pow_62 (Int64.of_int32 Int32.min_int)
+   || raw_int64 > Int64.add two_pow_62 (Int64.of_int32 Int32.max_int) then
+    Error (`Msg "e_ptime_of_tai64, number out of range")
+  else
+  match    Int64.sub raw_int64 two_pow_62 |> Int64.to_int
+        |> Ptime.Span.of_int_s |> Ptime.of_span with
+  | None -> Error (`Msg "e_ptime_of_tai64: Ptime.of_span = None")
+  | Some ptime -> Ok ptime
+
+let e_ptime_of_tai64_n e buf =
+  e_ptime_of_tai64 e buf >>= fun seconds ->
+  BE.e_get_uint32 e buf 8 >>= fun raw_nanosec ->
+  match Ptime.Span.of_d_ps
+          (0, Int64.mul 1000L (* multiply by 1000 to go from ps -> ns*)
+             (Int64.of_int32 (Int32.rem raw_nanosec 1_000_000_000l)))
+  with
+  | None -> Error (`Msg "e_ptime_of_tai64_n: out of range")
+  | Some nanoseconds ->
+    begin match Ptime.add_span seconds nanoseconds with
+      | None -> Error (`Msg "e_ptime_of_tai64_n: add_span")
+      | Some ptime -> Ok ptime
+    end
 
 let of_hex str =
   try R.ok (Hex.to_string (`Hex str) |> Cstruct.of_string) with

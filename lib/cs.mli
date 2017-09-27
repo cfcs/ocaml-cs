@@ -27,6 +27,14 @@ val e_get_char : 'error -> t -> int -> (char, 'error) result
 val e_set_char : 'error -> t -> int -> char -> (unit, 'error) result
 val e_blit : 'error -> t -> int -> t -> int -> int -> (unit, 'error) result
 
+(** dummy TAI64 handling. leap seconds are currently not factored in. *)
+val create_tai64_of_ptime : Ptime.t -> t
+val create_tai64_n_of_ptime : Ptime.t -> t
+val e_ptime_of_tai64 : ([>`Msg of string] as 'error) -> t ->
+                       (Ptime.t, 'error) result
+val e_ptime_of_tai64_n : ([>`Msg of string] as 'error) -> t ->
+                       (Ptime.t, 'error) result
+
 module BE :
   sig
     val get_uint16 :
@@ -47,6 +55,9 @@ module BE :
     val e_set_uint32 :
       'error -> t -> int -> Usane.Uint32.t -> (t, 'error) result
     val create_uint32 : Usane.Uint32.t -> t
+
+    val create_uint64 : Usane.Uint64.t -> t
+
     val e_get_ptimespan32 :
       'error -> t -> int -> (Ptime.span, 'error) result
     (** [e_get_ptime32 e buf offset] is the big-endian UNIX timestamp contained
