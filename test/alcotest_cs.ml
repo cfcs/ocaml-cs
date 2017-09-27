@@ -1,4 +1,10 @@
 let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal
+
+let ptime = Alcotest.testable (Ptime.pp_rfc3339 ())
+                              (fun a b -> 0 = Ptime.compare a b)
+
+let get_opt = function Some x -> x | None -> failwith "get_opt"
+
 let any () =
     Alcotest.testable (fun fmt _ -> Fmt.pf fmt "[polymorphic compare]")
       (fun (a:'t) (b:'t) -> 0 = compare a b)
@@ -22,8 +28,9 @@ let test_cs_w () =
         Cs.W.to_cs w |> Cs.W.of_cs |> Cs.W.to_cs
        )
 
+open Rresult
+
 let test_cs_r () =
-  let open Rresult in
   (let r = Cs.R.of_string (`Broken) "a" in
    Alcotest.(check @@ result char reject) "first: 'a'" (Ok 'a') (Cs.R.char r) ;
   Alcotest.(check @@ result char pass) "can't read beyond"
@@ -44,6 +51,19 @@ let test_strip_leading_char () =
   Alcotest.(check cs) "aaaabc -> bc" (Cs.of_string "bc")
     (Cs.of_string "aaaabc" |> Cs.strip_leading_char 'a')
 
+let test_tai64 () =
+  let test_helper hex second =
+    let mt = Cs.e_ptime_of_tai64 `e (Cs.of_hex hex |> R.get_ok) |> R.get_ok in
+    let ct = Cs.create_tai64_of_ptime mt in
+    let st = get_opt (Ptime.Span.of_int_s second |> Ptime.of_span) in
+    Alcotest.(check ptime)  hex st mt ;
+    Alcotest.(check string) hex (Cs.to_hex ct) (String.lowercase_ascii hex) ;
+    Alcotest.(check cs)     hex ct (Cs.create_tai64_of_ptime st)
+  in
+  (* From http://cr.yp.to/libtai/tai64.html *)
+  test_helper "3fFFffFFffFFffFF" (-1) ;
+  test_helper "400000002a2b2c2d" 707472429
+
 let tests =
   [ "Cs.to_list", `Quick, test_to_list
   ; "Cs.of_list", `Quick, test_of_list
@@ -51,6 +71,7 @@ let tests =
   ; "Cs.R", `Quick, test_cs_r
   ; "Cs.e_is_empty", `Quick, test_e_is_empty
   ; "Cs.strip_leading_char", `Quick, test_strip_leading_char
+  ; "Cs.e_ptime_of_tai64", `Quick, test_tai64
   ]
 
 let () =
