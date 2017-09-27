@@ -1,6 +1,7 @@
 open Rresult
 type t = Cstruct.t
 
+val empty : t
 val to_string : t -> string
 val of_string : ?allocator:(int -> t) -> string -> t
 val init : int -> (int -> char) -> t

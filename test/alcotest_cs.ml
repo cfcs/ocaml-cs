@@ -17,6 +17,10 @@ let test_of_list () =
   Alcotest.(check cs) "of_list |> to_list"
     (Cs.of_list ['a';'b';'c']) @@ Cs.of_string "abc"
 
+let test_empty () =
+  Alcotest.(check cs) "empty"
+    (Cs.of_string "") (Cs.empty)
+
 let test_cs_w () =
   Alcotest.(check cs) "Cs.W"
     (Cs.of_string ("a" ^ "bcd"^ "EFG" ^ "1234"))
@@ -82,6 +86,7 @@ let test_tai64 () =
 let tests =
   [ "Cs.to_list", `Quick, test_to_list
   ; "Cs.of_list", `Quick, test_of_list
+  ; "Cs.empty", `Quick, test_empty
   ; "Cs.W", `Quick, test_cs_w
   ; "Cs.R", `Quick, test_cs_r
   ; "Cs.e_is_empty", `Quick, test_e_is_empty

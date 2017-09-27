@@ -17,6 +17,7 @@ let get_uint8_unsafe buf offset = Cstruct.get_uint8 buf offset
 let init len f = String.init len f |> of_string
 let make len c = String.make len c |> of_string
 let of_char c = make 1 c
+let empty = create 0
 
 let dup {Cstruct.buffer ; len ; off} =
   let kind , layout , dim = Bigarray.Array1.(kind, layout, dim) in
