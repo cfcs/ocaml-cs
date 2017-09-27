@@ -89,19 +89,34 @@ val next_line :
 
 module W :
   sig
-    type t
-    val increase : t -> int -> int
-    val to_string : t -> string
-    val to_cs : t -> Cstruct.t
-    val of_cs : Cstruct.t -> t
-    val create : int -> t
-    val char : t -> char -> unit
-    val cs : t -> ?offset:int -> ?len:int -> Cstruct.t -> unit
-    val uint16 : t -> Usane.Uint16.t -> unit
-    val uint32 : t -> Usane.Uint32.t -> unit
-    val str : t -> ?offset:int -> ?len:int -> string -> unit
+    type wt
+    val increase : wt -> int -> int
+    val to_string : wt -> string
+    val to_cs : wt -> t
+    val of_cs : t -> wt
+    val create : int -> wt
+    val char : wt -> char -> unit
+    val cs : wt -> ?offset:int -> ?len:int -> t -> unit
+    val uint16 : wt -> Usane.Uint16.t -> unit
+    val uint32 : wt -> Usane.Uint32.t -> unit
+    val str : wt -> ?offset:int -> ?len:int -> string -> unit
     val e_ptime32 :
-      'error -> t -> Ptime.t -> (t, 'error) result
+      'error -> wt -> Ptime.t -> (unit, 'error) result
     val e_ptimespan32 :
-      'error -> t -> Ptime.span -> (t, 'error) result
+      'error -> wt -> Ptime.span -> (unit, 'error) result
   end
+
+module R :
+sig
+  (** Module for reading *)
+  type 'error rt =
+    { cs : t; mutable off : int; err : 'error; }
+
+  val of_cs : 'error -> ?offset:int -> t -> 'error rt
+  val of_string : 'error -> ?offset:int -> string -> 'error rt
+  val char : 'error rt -> (char, 'error) result
+  val uint8 : 'error rt -> (Cstruct.uint8, 'error) result
+  val uint16 : 'error rt -> (Cstruct.uint16, 'error) result
+  val uint32 : 'error rt -> (Cstruct.uint32, 'error) result
+  val cs : 'error rt -> int -> (t, 'error) result
+end

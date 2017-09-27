@@ -1,6 +1,6 @@
 let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal
-let polymorphic () =
-    Alcotest.testable (fun fmt _ -> Fmt.pf fmt "[polymorphic variant]")
+let any () =
+    Alcotest.testable (fun fmt _ -> Fmt.pf fmt "[polymorphic compare]")
       (fun (a:'t) (b:'t) -> 0 = compare a b)
 
 let test_to_list () =
@@ -22,10 +22,22 @@ let test_cs_w () =
         Cs.W.to_cs w |> Cs.W.of_cs |> Cs.W.to_cs
        )
 
+let test_cs_r () =
+  let open Rresult in
+  (let r = Cs.R.of_string (`Broken) "a" in
+   Alcotest.(check @@ result char reject) "first: 'a'" (Ok 'a') (Cs.R.char r) ;
+  Alcotest.(check @@ result char pass) "can't read beyond"
+    (Error `Broken)
+    (Cs.R.char r)
+  );
+  let r2 = Cs.R.of_string (`Msg "Cs.R broken") "\x00\x03\x00\x00\x01\x00" in
+  Alcotest.(check @@ result (any ()) reject) "uint16" (Ok 3) (Cs.R.uint16 r2) ;
+  Alcotest.(check @@ result (any ()) reject) "uint32" (Ok 256l) (Cs.R.uint32 r2)
+
 let test_e_is_empty () =
   Alcotest.(check @@ result unit reject) "empty"
     (Ok ()) (Cs.e_is_empty `e (Cs.of_string "")) ;
-  Alcotest.(check @@ result unit (polymorphic ())) "not empty"
+  Alcotest.(check @@ result unit (any ())) "not empty"
     (Error `e) (Cs.e_is_empty `e (Cs.of_string "a"))
 
 let test_strip_leading_char () =
@@ -36,8 +48,10 @@ let tests =
   [ "Cs.to_list", `Quick, test_to_list
   ; "Cs.of_list", `Quick, test_of_list
   ; "Cs.W", `Quick, test_cs_w
+  ; "Cs.R", `Quick, test_cs_r
   ; "Cs.e_is_empty", `Quick, test_e_is_empty
   ; "Cs.strip_leading_char", `Quick, test_strip_leading_char
   ]
 
-let () = Alcotest.run "ocaml-cs test suite" ["cstruct wrapper module", tests]
+let () =
+  Alcotest.run "ocaml-cs test suite" ["Cs (cstruct wrapper module)", tests]

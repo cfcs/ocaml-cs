@@ -271,7 +271,7 @@ let next_line ?max_length buf : [> `Last_line of t | `Next_tuple of t*t] =
   end
 
 module W = struct
-  type t = Cstruct.t ref
+  type wt = t ref
   let increase t n_len : int =
     let old_len = Cstruct.len !t in
     ( try t := Cstruct.add_len !t n_len
@@ -308,7 +308,23 @@ module W = struct
     let src_len = min_len (`Str src) len in
     Cstruct.blit_from_string src offset !t (increase t src_len) src_len
 
-  let e_ptime32 e t ptime = BE.e_create_ptime32 e ptime >>| cs t >>| fun () -> t
+  let e_ptime32 e t ptime = BE.e_create_ptime32 e ptime >>| cs t
   let e_ptimespan32 e t ptimespan =
-    BE.e_create_ptimespan32 e ptimespan >>| cs t >>| fun () -> t
+    BE.e_create_ptimespan32 e ptimespan >>| cs t
+end
+
+module R =
+struct
+  type 'e rt = { cs: t
+              ; mutable off : int
+              ; err: 'e}
+  let of_cs err ?(offset=0) cs = {cs ; off = offset; err}
+  let of_string err ?(offset=0) str =  of_cs err ~offset (of_string str)
+  let alen (r:'e rt) adjustment (rv:('ok,'e) result) : ('ok,'e) result =
+    rv >>| fun v -> r.off <- (r.off + adjustment) ; v
+  let char r = e_get_char r.err r.cs r.off |> alen r 1
+  let uint8 r = e_get_uint8 r.err r.cs r.off |> alen r 1
+  let uint16 r = BE.e_get_uint16 r.err r.cs r.off |> alen r 2
+  let uint32 r = BE.e_get_uint32 r.err r.cs r.off |> alen r 4
+  let cs r len = sub r.cs 0 len |> R.reword_error (fun _ -> r.err) |> alen r len
 end
