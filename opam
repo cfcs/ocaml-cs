@@ -19,14 +19,15 @@ build-test: [
 depends: [
   "ocamlbuild" {build}
   "ocamlfind" {build}
-  "topkg" {build}
   "odoc" {build & doc}
+  "topkg" {build}
   "alcotest" {test}
   "cstruct"
-  "usane"
+  "fmt"
   "hex"
-  "rresult"
   "ptime"
+  "rresult"
+  "usane"
 ]
 
 depopts: [

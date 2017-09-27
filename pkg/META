@@ -1,6 +1,6 @@
 description = "Cstruct wrappers with result types"
 version = "%%VERSION_NUM%%"
-requires = "cstruct hex ptime rresult usane"
+requires = "cstruct fmt hex ptime rresult usane"
 archive(byte) = "cs.cma"
 plugin(byte) = "cs.cma"
 archive(native) = "cs.cmxa"

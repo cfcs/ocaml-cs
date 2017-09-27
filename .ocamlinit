@@ -1,3 +1,4 @@
+#require "fmt"
 #require "hex"
 #require "ptime.clock.os.top"
 #require "rresult.top"

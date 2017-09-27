@@ -6,7 +6,6 @@ val of_string : ?allocator:(int -> t) -> string -> t
 val init : int -> (int -> char) -> t
 val make : int -> char -> t
 val equal : t -> t -> bool
-val sub : t -> int -> int -> t
 val len : t -> int
 val create : int -> t
 val blit : t -> int -> t -> int -> int -> unit
@@ -119,4 +118,6 @@ sig
   val uint16 : 'error rt -> (Cstruct.uint16, 'error) result
   val uint32 : 'error rt -> (Cstruct.uint32, 'error) result
   val cs : 'error rt -> int -> (t, 'error) result
+  val len : 'error rt -> int
+  val pp : Format.formatter -> 'error rt -> unit
 end
