@@ -41,11 +41,13 @@ let test_cs_r () =
     (Error `Broken)
     (Cs.R.char r)
   );
-  let x = Cs.R.of_string (`Msg "Cs.R broken") "\x00\x03\x00\x00\x01\x00abc" in
-  Alcotest.(check @@ result (any()) reject) "uint16" (Ok 3) (Cs.R.uint16 x);
-  Alcotest.(check @@ result (any()) reject) "uint32" (Ok 256l) (Cs.R.uint32 x);
+  let x = Cs.R.of_string (`Msg "Cs.R broken")
+                         "\x00\x03\x00\x00\x01\x00abc\x00DEF\x00\x00\x00\x00B" in
+  Alcotest.(check @@ result (int) reject) "uint16" (Ok 3) (Cs.R.uint16 x);
+  Alcotest.(check @@ result (int32) reject) "uint32" (Ok 256l) (Cs.R.uint32 x);
   Alcotest.(check @@ result unit reject) "equal_string"
-    (Ok ()) (Cs.R.equal_string x "abc")
+    (Ok ()) (Cs.R.equal_string x "abc\x00");
+  Alcotest.(check @@ result (string) reject) "string_z" (Ok "DEF") (Cs.R.string_z x 6)
 
 let test_e_is_empty () =
   Alcotest.(check @@ result unit reject) "empty"

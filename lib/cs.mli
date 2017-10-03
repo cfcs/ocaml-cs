@@ -131,6 +131,10 @@ sig
   val uint32 : 'error rt -> (Cstruct.uint32, 'error) result
   val cs : 'error rt -> int -> (t, 'error) result
   val string : 'error rt -> int -> (string, 'error) result
+  val string_z : 'error rt -> int -> (string, 'error) result
+  (** [string_z rt len] takes [len] bytes, strips trailing nullbytes,
+      and returns the result as a string. For parsing fixed-length c-structs.*)
+
   val equal_string : 'error rt -> string -> (unit, 'error) result
   (** [equal_string rt mstr] is Error if the next value <> [mstr] *)
 

@@ -278,7 +278,7 @@ let strip_leading_char c buf : t =
   loop 0
 
 let strip_trailing_char c buf : t =
-  strip_leading_char c (reverse buf)
+  strip_leading_char c (reverse buf) |> reverse
 
 let split_by_char c ?offset ?max_offset buf : (t*t, 'error) result =
   begin match index_opt ?offset ?max_offset buf c with
@@ -388,9 +388,6 @@ struct
                  |> R.reword_error (fun _ -> r.err)
                  |> alen r len
   let string r len = cs r len >>| to_string
-  let equal_string r s : (unit,'error) result =
-          Fmt.pr "s: %S pp: %a\n%!" s pp r;
-          cs r (String.length s) >>= fun cs2 ->
-          (Fmt.pr "pp2: %a\ncs2: %s\n%!" pp r (to_hex cs2);
-          e_equal_string r.err s cs2)
+  let string_z r len = cs r len >>| strip_trailing_char '\x00' >>| to_string
+  let equal_string r s = cs r (String.length s) >>= e_equal_string r.err s
 end
