@@ -130,6 +130,10 @@ sig
   val uint16 : 'error rt -> (Cstruct.uint16, 'error) result
   val uint32 : 'error rt -> (Cstruct.uint32, 'error) result
   val cs : 'error rt -> int -> (t, 'error) result
+  val string : 'error rt -> int -> (string, 'error) result
+  val equal_string : 'error rt -> string -> (unit, 'error) result
+  (** [equal_string rt mstr] is Error if the next value <> [mstr] *)
+
   val len : 'error rt -> int
   val pp : Format.formatter -> 'error rt -> unit
 end

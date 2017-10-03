@@ -370,6 +370,12 @@ struct
   type 'e rt = { cs: t
               ; mutable off : int
               ; err: 'e}
+  let len r = len r.cs - r.off
+  let pp ppf r =
+    Fmt.pf ppf "Cs.R @[<v>off: %d len: %d@, consumed: %a@,remaining: %a@]"
+      r.off (len r)
+      Cstruct.hexdump_pp (sub_unsafe r.cs 0 r.off)
+      Cstruct.hexdump_pp (sub_unsafe r.cs r.off (len r))
   let of_cs err ?(offset=0) cs = {cs ; off = offset; err}
   let of_string err ?(offset=0) str =  of_cs err ~offset (of_string str)
   let alen (r:'e rt) adjustment (rv:('ok,'e) result) : ('ok,'e) result =
@@ -378,12 +384,13 @@ struct
   let uint8 r  =    e_get_uint8  r.err r.cs r.off |> alen r 1
   let uint16 r = BE.e_get_uint16 r.err r.cs r.off |> alen r 2
   let uint32 r = BE.e_get_uint32 r.err r.cs r.off |> alen r 4
-  let cs r len = sub r.cs 0 len
+  let cs r len = sub r.cs r.off len
                  |> R.reword_error (fun _ -> r.err)
                  |> alen r len
-  let len r = len r.cs - r.off
-  let pp ppf r =
-    Fmt.pf ppf "Cs.R @[<v> consumed: %a@,remaining: %a@]"
-      Cstruct.hexdump_pp (sub_unsafe r.cs 0 r.off)
-      Cstruct.hexdump_pp (sub_unsafe r.cs r.off (len r))
+  let string r len = cs r len >>| to_string
+  let equal_string r s : (unit,'error) result =
+          Fmt.pr "s: %S pp: %a\n%!" s pp r;
+          cs r (String.length s) >>= fun cs2 ->
+          (Fmt.pr "pp2: %a\ncs2: %s\n%!" pp r (to_hex cs2);
+          e_equal_string r.err s cs2)
 end
