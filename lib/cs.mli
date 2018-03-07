@@ -1,6 +1,7 @@
 type t
 val shift : t -> int -> t
 val of_cstruct : Cstruct.t -> t
+val to_cstruct : t -> Cstruct.t
 val pp_hex : Format.formatter -> t -> unit
 val empty : t
 val to_string : t -> string
