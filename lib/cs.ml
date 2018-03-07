@@ -3,6 +3,7 @@ open Rresult
 
 type t = Cstruct.t
 
+let shift t amount = Cstruct.shift t amount
 let pp_hex fmt t = Cstruct.hexdump_pp fmt t
 let to_string = Cstruct.to_string
 let of_string = Cstruct.of_string
