@@ -1,4 +1,4 @@
-let cs = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal
+let cs = Alcotest.testable Cs.pp_hex Cs.equal
 
 let ptime = Alcotest.testable (Ptime.pp_rfc3339 ~frac_s:1000000())
                               (fun a b -> 0 = Ptime.compare a b)
@@ -59,6 +59,19 @@ let test_strip_leading_char () =
   Alcotest.(check cs) "aaaabc -> bc" (Cs.of_string "bc")
     (Cs.of_string "aaaabc" |> Cs.strip_leading_char 'a')
 
+let test_xor () =
+  Alcotest.(check @@ result cs reject) "empty"
+    (Ok Cs.empty) (Cs.xor Cs.empty Cs.empty) ;
+  Alcotest.(check @@ result reject pass) "diff lengths"
+    (Error (`Msg "diff lengths"))
+    (Cs.xor Cs.(of_string "a") Cs.(of_string "aa")) ;
+  Alcotest.(check @@ result cs reject) "a ^ b"
+    (Ok (Cs.of_string "\x03"))
+    (Cs.xor Cs.(of_string "a") Cs.(of_string "b")) ;
+  Alcotest.(check @@ result cs reject) "\"ac\" ^ \"b0\""
+    (Ok Cs.(of_string "\x03\x53"))
+    (Cs.xor Cs.(of_string "ac") Cs.(of_string "b0"))
+
 let test_tai64 () =
   let test_helper hex second =
     let unhexed = Cs.of_hex hex |> R.get_ok in
@@ -95,6 +108,7 @@ let tests =
   ; "Cs.R", `Quick, test_cs_r
   ; "Cs.e_is_empty", `Quick, test_e_is_empty
   ; "Cs.strip_leading_char", `Quick, test_strip_leading_char
+  ; "Cs.xor", `Quick, test_xor
   ; "Cs.e_ptime_of_tai64", `Quick, test_tai64
   ]
 

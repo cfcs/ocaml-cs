@@ -6,6 +6,6 @@ open Topkg
 let () =
   Pkg.describe "cs" @@ fun _c ->
   Ok [ Pkg.lib "pkg/META"
-     ; Pkg.mllib "lib/cs.mllib"
+     ; Pkg.mllib ~api:["Cs"] "lib/cs.mllib"
      ; Pkg.test "test/alcotest_cs"
      ]

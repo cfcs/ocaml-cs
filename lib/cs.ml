@@ -3,6 +3,7 @@ open Rresult
 
 type t = Cstruct.t
 
+let pp_hex fmt t = Cstruct.hexdump_pp fmt t
 let to_string = Cstruct.to_string
 let of_string = Cstruct.of_string
 let equal = Cstruct.equal
@@ -321,6 +322,13 @@ let next_line ?max_length buf : [> `Last_line of t | `Next_tuple of t*t] =
         sub_unsafe buf (n_idx+1) (len buf - n_idx-1)
       )
   end
+
+let xor a b =
+  let a_len = len a in
+  if a_len <> len b then
+    R.error_msgf "cannot xor; got lengths %d and %d" a_len (len b)
+  else Ok (init a_len (fun i ->
+      Char.chr @@ (get_uint8_unsafe a i) lxor (get_uint8_unsafe b i) ))
 
 module W = struct
   type wt = t ref
