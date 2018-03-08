@@ -30,6 +30,10 @@ val e_split :
   ?start:int -> 'error -> t -> int -> (t * t, 'error) Rresult.result
 val e_split_char :
   ?start:int -> 'error -> t -> (char * t, 'error) Rresult.result
+val get_char_unsafe : t -> int -> char
+(** [get_char_unsafe t offset] is the char offset at [offset], and fails
+    with an exception if [offset] is out of bounds.*)
+
 val get_char_result : t -> int -> (char, [> Rresult.R.msg ]) Rresult.result
 val e_get_char : 'error -> t -> int -> (char, 'error) Rresult.result
 val e_set_char : 'error -> t -> int -> char -> (unit, 'error) Rresult.result

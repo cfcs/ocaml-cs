@@ -66,6 +66,8 @@ let e_split_char ?(start=0) (e:'error) buf : (char * t, 'error) result =
   (* pops the leftmost char off buf and return the char + remainder *)
   e_split ~start e buf 1 >>| fun (c,tl) -> (Cstruct.get_char c 0 , tl)
 
+let get_char_unsafe buf offset = Cstruct.get_char buf offset
+
 let get_char_result buf offset =
   wrap_f_buf_offset Cstruct.get_char buf offset
 
