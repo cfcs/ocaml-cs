@@ -8,7 +8,12 @@ val to_string : t -> string
 val of_string : ?allocator:(int -> t) -> string -> t
 val init : int -> (int -> char) -> t
 val make : int -> char -> t
+
 val equal : t -> t -> bool
+(** [equal t1 t2] is true if t1 = t2.
+    The implementation terminates on the first byte that differs and is thus a
+    potential candidate of timing attacks in security-critical applications.*)
+
 val len : t -> int
 val create : int -> t
 val blit : t -> int -> t -> int -> int -> unit
