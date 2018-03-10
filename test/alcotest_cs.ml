@@ -26,7 +26,7 @@ let test_cs_w () =
     (Cs.of_string ("a" ^ "bcd"^ "EFG" ^ "1234"))
        (let w = Cs.W.create 2 in
         Cs.W.char w 'a';
-        Cs.W.str w "bcd";
+        Cs.W.string w "bcd";
         Cs.W.cs w (Cs.of_string "EFG") ;
         ignore @@ Cs.W.e_ptimespan32 `TODO w (Ptime.Span.of_int_s 0x31323334) ;
         Cs.W.to_cs w |> Cs.W.of_cs |> Cs.W.to_cs

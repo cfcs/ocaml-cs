@@ -133,7 +133,7 @@ module W :
     val cs : wt -> ?offset:int -> ?len:int -> t -> unit
     val uint16 : wt -> Usane.Uint16.t -> unit
     val uint32 : wt -> Usane.Uint32.t -> unit
-    val str : wt -> ?offset:int -> ?len:int -> string -> unit
+    val string : wt -> ?offset:int -> ?len:int -> string -> unit
     val e_ptime32 : 'error -> wt -> Ptime.t -> (unit, 'error) Rresult.result
     val e_ptimespan32 :
       'error -> wt -> Ptime.span -> (unit, 'error) Rresult.result
