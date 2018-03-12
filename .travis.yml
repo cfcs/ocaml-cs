@@ -1,7 +1,8 @@
 env:
   global:
-    - PINS="usane:https://github.com/hannesm/usane.git"
+    - PINS="usane:https://github.com/hannesm/usane.git openpgp:https://github.com/cfcs/ocaml-openpgp.git luks:https://github.com/cfcs/ocaml-luks.git"
     - PACKAGE="cs"
+    - REVDEPS="openpgp luks"
   matrix:
     - OCAML_VERSION=4.04
     - OCAML_VERSION=4.05
