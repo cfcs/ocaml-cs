@@ -24,6 +24,12 @@ let make len c = String.make len c |> of_string
 let of_char c = make 1 c
 let empty = create 0
 
+let map_char f (t:t) =
+  let rec loop acc = function
+    | -1 -> acc
+    | i -> (loop[@tailcall]) ((f @@ Cstruct.get_char t i)::acc) (pred i)
+  in loop [] (max (-1) @@ len t -1)
+
 let dup {Cstruct.buffer ; len ; off} =
   let kind , layout , dim = Bigarray.Array1.(kind, layout, dim) in
   let new_buf =

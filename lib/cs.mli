@@ -9,6 +9,10 @@ val of_string : ?allocator:(int -> t) -> string -> t
 val init : int -> (int -> char) -> t
 val make : int -> char -> t
 
+val map_char : (char -> 'a) -> t -> 'a list
+(** [map_char f t] is the equivalent of [Array.map] on an array of the
+    chars contained in [t].*)
+
 val equal : t -> t -> bool
 (** [equal t1 t2] is true if t1 = t2.
     The implementation terminates on the first byte that differs and is thus a
