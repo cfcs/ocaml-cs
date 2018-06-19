@@ -11,13 +11,15 @@ let pp_hex fmt t = Cstruct.hexdump_pp fmt t
 let to_string = Cstruct.to_string
 let of_string = Cstruct.of_string
 let equal = Cstruct.equal
-let sub_unsafe = Cstruct.sub
+let exc_sub = Cstruct.sub
 let len = Cstruct.len (* TODO consider returning Usane.Uint64.t *)
 let create = Cstruct.create
 let blit = Cstruct.blit
 let concat = Cstruct.concat (*TODO wrap exceptions *)
-let set_uint8 = Cstruct.set_uint8
-let get_uint8_unsafe buf offset = Cstruct.get_uint8 buf offset
+
+let exc_set_uint8 buf offset uint8 = Cstruct.set_uint8 buf offset uint8
+let exc_get_uint8 buf offset = Cstruct.get_uint8 buf offset
+let exc_get_char buf offset = Cstruct.get_char buf offset
 
 let init len f = String.init len f |> of_string
 let make len c = String.make len c |> of_string
@@ -52,12 +54,15 @@ let wrap_f_buf_offset f buf offset =
 let wrap_err errval res =
   res |> R.reword_error (function _ -> errval)
 
-let get_uint8 = wrap_f_buf_offset get_uint8_unsafe
-
+let get_uint8 = wrap_f_buf_offset exc_get_uint8
 let e_get_uint8 e buf offset = wrap_err e  (get_uint8 buf offset)
+let e_set_uint8 e buf offset uint8 =
+  (fun () -> exc_set_uint8 buf offset uint8)
+  |> wrap_invalid_argument |> wrap_err e
+
 
 let sub cstr off len =
-  wrap_invalid_argument (fun () -> sub_unsafe cstr off len)
+  wrap_invalid_argument (fun () -> exc_sub cstr off len)
 
 let e_sub e cstr off len =
   wrap_err e (sub cstr off len)
@@ -71,8 +76,6 @@ let e_split ?(start=0) e buf len =
 let e_split_char ?(start=0) (e:'error) buf : (char * t, 'error) result =
   (* pops the leftmost char off buf and return the char + remainder *)
   e_split ~start e buf 1 >>| fun (c,tl) -> (Cstruct.get_char c 0 , tl)
-
-let get_char_unsafe buf offset = Cstruct.get_char buf offset
 
 let get_char_result buf offset =
   wrap_f_buf_offset Cstruct.get_char buf offset
@@ -91,16 +94,15 @@ let e_blit e src srcoff dst dstoff len =
 module BE = struct
   let get_uint16 buf offset =
     wrap_f_buf_offset Cstruct.BE.get_uint16 buf offset
-  let e_get_uint16 e buf offset =
-    wrap_err e (get_uint16 buf offset)
-
   let get_uint32 buf offset =
     wrap_f_buf_offset Cstruct.BE.get_uint32 buf offset
-  let e_get_uint32 e buf offset =
-    wrap_err e (get_uint32 buf offset)
-
   let get_uint64 buf offset =
     wrap_f_buf_offset Cstruct.BE.get_uint64 buf offset
+
+  let e_get_uint16 e buf offset =
+    wrap_err e (get_uint16 buf offset)
+  let e_get_uint32 e buf offset =
+    wrap_err e (get_uint32 buf offset)
   let e_get_uint64 e buf offset =
     wrap_err e (get_uint64 buf offset)
 
@@ -108,24 +110,26 @@ module BE = struct
     : (Cstruct.t,[> `Msg of string]) result =
     wrap_invalid_argument (fun () ->
         Cstruct.BE.set_uint16 buf offset int16; buf)
+  let set_uint32 buf offset (int32 : Usane.Uint32.t) =
+    wrap_invalid_argument (fun () ->
+        Cstruct.BE.set_uint32 buf offset int32; buf)
+  let set_uint64 buf offset (int64 : Usane.Uint64.t) =
+    wrap_invalid_argument (fun () ->
+        Cstruct.BE.set_uint64 buf offset int64; buf)
 
   let e_set_uint16 e buf offset int16 =
     wrap_err e (set_uint16 buf offset int16)
+  let e_set_uint32 e buf offset int32 =
+    wrap_err e (set_uint32 buf offset int32)
+  let e_set_uint64 e buf offset int64 =
+    wrap_err e (set_uint64 buf offset int64)
 
   let create_uint16 (int16 : Usane.Uint16.t) =
     let buf = Cstruct.create 2 in
     Cstruct.BE.set_uint16 buf 0 int16 ; buf
-
-  let set_uint32 buf offset (int32 : Usane.Uint32.t) =
-    wrap_invalid_argument (fun () ->
-        Cstruct.BE.set_uint32 buf offset int32; buf)
-  let e_set_uint32 e buf offset int32 =
-    wrap_err e (set_uint32 buf offset int32)
-
   let create_uint32 (int32 : Usane.Uint32.t) =
     let buf = Cstruct.create 4 in
     Cstruct.BE.set_uint32 buf 0 int32 ; buf
-
   let create_uint64 (int64 : Usane.Uint64.t) =
     let buf = Cstruct.create 8 in
     Cstruct.BE.set_uint64 buf 0 int64 ; buf
@@ -154,10 +158,12 @@ module BE = struct
   let e_create_ptime32 e = e_set_ptime32 e (create 4) 0
 end
 
+(*
 let two_pow_62 = 0x4_000_000_000_000_000L (*no Int64.pow - wtf?*)
 
 let create_tai64_of_ptime time =
-  let days, picoseconds = Ptime.to_span time |> Ptime.Span.to_d_ps in
+  let days, picoseconds = Ptime.to_span time
+                          |> Ptime.Span.to_d_ps in
   let seconds = Int64.div picoseconds 1000_000_000_000L in
   Int64.add two_pow_62
     (Int64.add seconds
@@ -194,6 +200,7 @@ let e_ptime_of_tai64_n e buf =
       | None -> Error (`Msg "e_ptime_of_tai64_n: add_span")
       | Some ptime -> Ok ptime
     end
+*)
 
 let of_hex str =
   try R.ok (Hex.to_string (`Hex str) |> Cstruct.of_string) with
@@ -212,15 +219,16 @@ let to_list buf =
 
 let of_list (lst : char list) =
   let buf = Cstruct.create_unsafe (List.length lst) in
-  lst |> List.iteri (Cstruct.set_char buf) ; buf
+  List.iteri (Cstruct.set_char buf) lst ;
+  buf
 
 let make_uint8 int8 =
   let buf = create 1 in
-  set_uint8 buf 0 int8 ; buf
+  exc_set_uint8 buf 0 int8 ; buf
 
 let reverse cs : t =
   (* Zarith hides the function for reading little-endian unsigned integers under
-     the name "to_bits".
+     the name "to_bits". Maybe. Probably depends on Sys.big_endian
      In the spirit of wasting time, the author(s) encourages
      kindly doing your own bloody string reversing if you want to
      use Zarith for real-world protocols: *)
@@ -266,7 +274,7 @@ let find b ?(max_offset) ?(offset=0) needle =
       begin match index_opt ~max_offset ~offset:i b first_needle with
         | None -> None
         | Some c_off ->
-          if Cstruct.(equal (sub_unsafe b c_off needle_len) needle) then
+          if Cstruct.(equal (exc_sub b c_off needle_len) needle) then
             Some c_off
           else
             (next[@tailcall]) (i + 1)
@@ -322,16 +330,16 @@ let e_find_string_list e str_list buf : (string,'error) result=
 let next_line ?max_length buf : [> `Last_line of t | `Next_tuple of t*t] =
   begin match index_opt ?max_offset:max_length buf '\n' with
     | None -> `Last_line buf
-    | Some 0 -> `Next_tuple (Cstruct.create 0 , sub_unsafe buf 1 (len buf -1))
+    | Some 0 -> `Next_tuple (Cstruct.create 0 , exc_sub buf 1 (len buf -1))
     | Some n_idx when Cstruct.get_char buf (n_idx-1) = '\r' ->
       `Next_tuple (
-        sub_unsafe buf 0 (n_idx-1),
-        sub_unsafe buf (n_idx+1) (len buf -n_idx-1)
+        exc_sub buf 0 (n_idx-1),
+        exc_sub buf (n_idx+1) (len buf -n_idx-1)
       )
     | Some n_idx ->
       `Next_tuple (
-        sub_unsafe buf 0 n_idx ,
-        sub_unsafe buf (n_idx+1) (len buf - n_idx-1)
+        exc_sub buf 0 n_idx ,
+        exc_sub buf (n_idx+1) (len buf - n_idx-1)
       )
   end
 
@@ -340,7 +348,7 @@ let xor a b =
   if a_len <> len b then
     R.error_msgf "cannot xor; got lengths %d and %d" a_len (len b)
   else Ok (init a_len (fun i ->
-      Char.chr @@ (get_uint8_unsafe a i) lxor (get_uint8_unsafe b i) ))
+      Char.chr @@ (exc_get_uint8 a i) lxor (exc_get_uint8 b i) ))
 
 module W = struct
   type wt = t ref
@@ -348,8 +356,12 @@ module W = struct
     let old_len = Cstruct.len !t in
     ( try t := Cstruct.add_len !t n_len
       with Invalid_argument _ ->
-        t := concat [!t ; create n_len ]
-    ) ; old_len
+        t := Cstruct.set_len
+            (concat [!t ; (* amortize expansion cost: *)
+                     create (n_len + Bigarray.Array1.dim !t.Cstruct.buffer) ]
+            ) (old_len + n_len) ;
+    ) ;
+    old_len
 
   let to_string t = to_string !t
   let to_cs t = !t
@@ -373,8 +385,10 @@ module W = struct
     let src_len = min_len (`Cs src) len in
     Cstruct.blit src offset !t (increase t src_len) src_len
 
+  let uint8  t i = exc_set_uint8 !t (increase t 1) i
   let uint16 t i = cs t (BE.create_uint16 i)
   let uint32 t i = cs t (BE.create_uint32 i)
+  let uint64 t i = cs t (BE.create_uint64 i)
 
   let string t ?(offset=0) ?len src =
     let src_len = min_len (`Str src) len in
@@ -394,16 +408,19 @@ struct
   let pp ppf r =
     Fmt.pf ppf "Cs.R @[<v>off: %d len: %d@, consumed: %a@,remaining: %a@]"
       r.off (len r)
-      Cstruct.hexdump_pp (sub_unsafe r.cs 0 r.off)
-      Cstruct.hexdump_pp (sub_unsafe r.cs r.off (len r))
+      Cstruct.hexdump_pp (exc_sub r.cs 0 r.off)
+      Cstruct.hexdump_pp (exc_sub r.cs r.off (len r))
   let of_cs err ?(offset=0) cs = {cs ; off = offset; err}
   let of_string err ?(offset=0) str =  of_cs err ~offset (of_string str)
   let alen (r:'e rt) adjustment (rv:('ok,'e) result) : ('ok,'e) result =
     rv >>| fun v -> r.off <- (r.off + adjustment) ; v
   let char r   =    e_get_char   r.err r.cs r.off |> alen r 1
+
   let uint8 r  =    e_get_uint8  r.err r.cs r.off |> alen r 1
   let uint16 r = BE.e_get_uint16 r.err r.cs r.off |> alen r 2
   let uint32 r = BE.e_get_uint32 r.err r.cs r.off |> alen r 4
+  let uint64 r = BE.e_get_uint64 r.err r.cs r.off |> alen r 4
+
   let cs r len = sub r.cs r.off len
                  |> R.reword_error (fun _ -> r.err)
                  |> alen r len

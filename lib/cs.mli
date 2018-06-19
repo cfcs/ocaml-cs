@@ -9,6 +9,8 @@ val of_string : ?allocator:(int -> t) -> string -> t
 val init : int -> (int -> char) -> t
 val make : int -> char -> t
 
+open Rresult
+
 val map_char : (char -> 'a) -> t -> 'a list
 (** [map_char f t] is the equivalent of [Array.map] on an array of the
     chars contained in [t].*)
@@ -20,17 +22,30 @@ val equal : t -> t -> bool
 
 val len : t -> int
 val create : int -> t
+(** [create size] is a new [t] of length [size]. See {!Cstruct.create}.*)
+
 val blit : t -> int -> t -> int -> int -> unit
+(** See {!Cstruct.blit}.*)
+
 val concat : t list -> t
-val set_uint8 : t -> int -> Usane.Uint8.t -> unit
+val exc_set_uint8 : t -> int -> Usane.Uint8.t -> unit
 val of_char : char -> t
+
 val dup : t -> t
-val get_uint8_unsafe : t -> int -> Usane.Uint8.t
+(** [dup t] is a new memory allocation to which [t] has been blitted.*)
+
+val exc_get_uint8 : t -> int -> Usane.Uint8.t
+(** {!Cstruct.get_uint8} *)
+
+val e_set_uint8 : 'error -> t -> int -> Usane.Uint8.t -> (unit, 'error) result
 val get_uint8 :
   t -> int -> (Usane.Uint8.t, [> Rresult.R.msg ]) Rresult.result
 val e_get_uint8 :
   'error -> t -> int -> (Usane.Uint8.t, 'error) Rresult.result
-val sub_unsafe : t -> int -> int -> t
+
+val exc_sub : t -> int -> int -> t
+(** {!Cstruct.sub} *)
+
 val sub : t -> int -> int -> (t, [> Rresult.R.msg ]) Rresult.result
 val e_sub : 'error -> t -> int -> int -> (t, 'error) Rresult.result
 val split_result :
@@ -39,54 +54,74 @@ val e_split :
   ?start:int -> 'error -> t -> int -> (t * t, 'error) Rresult.result
 val e_split_char :
   ?start:int -> 'error -> t -> (char * t, 'error) Rresult.result
-val get_char_unsafe : t -> int -> char
-(** [get_char_unsafe t offset] is the char offset at [offset], and fails
-    with an exception if [offset] is out of bounds.*)
+
+val exc_get_char : t -> int -> char
+(** [exc_get_char t offset] is the char offset at [offset], and fails
+    with an exception if [offset] is out of bounds. See {!Cstruct.get_char}.*)
 
 val get_char_result : t -> int -> (char, [> Rresult.R.msg ]) Rresult.result
 val e_get_char : 'error -> t -> int -> (char, 'error) Rresult.result
 val e_set_char : 'error -> t -> int -> char -> (unit, 'error) Rresult.result
 val e_blit :
   'error -> t -> int -> t -> int -> int -> (unit, 'error) Rresult.result
-val create_tai64_of_ptime : Ptime.t -> t
+
+(*val create_tai64_of_ptime : Ptime.t -> t
 val create_tai64_n_of_ptime : Ptime.t -> t
 val e_ptime_of_tai64 :
   ([> `Msg of string ] as 'error) -> t -> (Ptime.t, 'error) Rresult.result
 val e_ptime_of_tai64_n :
   ([> `Msg of string ] as 'error) -> t -> (Ptime.t, 'error) Rresult.result
+*)
 module BE :
   sig
     val get_uint16 :
       t -> int -> (Usane.Uint16.t, [> Rresult.R.msg ]) Rresult.result
-    val e_get_uint16 :
-      'error -> t -> int -> (Usane.Uint16.t, 'error) Rresult.result
     val get_uint32 :
       t -> int -> (Usane.Uint32.t, [> Rresult.R.msg ]) Rresult.result
-    val e_get_uint32 :
-      'error -> t -> int -> (Usane.Uint32.t, 'error) Rresult.result
+    val get_uint64 :
+      t -> int -> (Usane.Uint64.t, [> Rresult.R.msg ]) Rresult.result
+
     val set_uint16 :
       t -> int -> Usane.Uint16.t -> (t, [> Rresult.R.msg ]) Rresult.result
-    val e_set_uint16 :
-      'error -> t -> int -> Usane.Uint16.t -> (t, 'error) Rresult.result
-    val create_uint16 : Usane.Uint16.t -> t
     val set_uint32 :
       t -> int -> Usane.Uint32.t -> (t, [> Rresult.R.msg ]) Rresult.result
+    val set_uint64 :
+      t -> int -> Usane.Uint64.t -> (t, [> Rresult.R.msg]) Rresult.result
+
+    val e_get_uint16 :
+      'error -> t -> int -> (Usane.Uint16.t, 'error) Rresult.result
+    val e_get_uint32 :
+      'error -> t -> int -> (Usane.Uint32.t, 'error) Rresult.result
+    val e_get_uint64 :
+      'error -> t -> int -> (Usane.Uint64.t, 'error) Rresult.result
+
+    val e_set_uint16 :
+      'error -> t -> int -> Usane.Uint16.t -> (t, 'error) Rresult.result
     val e_set_uint32 :
       'error -> t -> int -> Usane.Uint32.t -> (t, 'error) Rresult.result
+    val e_set_uint64 :
+      'error -> t -> int -> Usane.Uint64.t -> (t, 'error) Rresult.result
+
+    val create_uint16 : Usane.Uint16.t -> t
     val create_uint32 : Usane.Uint32.t -> t
     val create_uint64 : Usane.Uint64.t -> t
+
     val e_get_ptimespan32 :
       'error -> t -> int -> (Ptime.span, 'error) Rresult.result
     val e_get_ptime32 :
       'error -> t -> int -> (Ptime.t, 'error) Rresult.result
+
     val e_set_ptimespan32 :
       'error -> t -> int -> Ptime.span -> (t, 'error) Rresult.result
     val e_set_ptime32 :
       'error -> t -> int -> Ptime.t -> (t, 'error) Rresult.result
+
     val e_create_ptimespan32 :
       'error -> Ptime.span -> (t, 'error) Rresult.result
     val e_create_ptime32 : 'error -> Ptime.t -> (t, 'error) Rresult.result
   end
+
+
 val of_hex : string -> (t, [> `Invalid_hex ]) Rresult.result
 val to_hex : t -> string
 val to_list : t -> char list
@@ -135,8 +170,10 @@ module W :
     val create : int -> wt
     val char : wt -> char -> unit
     val cs : wt -> ?offset:int -> ?len:int -> t -> unit
+    val uint8 : wt -> Usane.Uint8.t -> unit
     val uint16 : wt -> Usane.Uint16.t -> unit
     val uint32 : wt -> Usane.Uint32.t -> unit
+    val uint64 : wt -> Usane.Uint64.t -> unit
     val string : wt -> ?offset:int -> ?len:int -> string -> unit
     val e_ptime32 : 'error -> wt -> Ptime.t -> (unit, 'error) Rresult.result
     val e_ptimespan32 :
@@ -151,6 +188,7 @@ module R :
     val uint8 : 'error rt -> (Usane.Uint8.t, 'error) Rresult.result
     val uint16 : 'error rt -> (Usane.Uint16.t, 'error) Rresult.result
     val uint32 : 'error rt -> (Usane.Uint32.t, 'error) Rresult.result
+    val uint64 : 'error rt -> (Usane.Uint64.t, 'error) Rresult.result
     val cs : 'error rt -> int -> (t, 'error) Rresult.result
     val string : 'error rt -> int -> (string, 'error) Rresult.result
     val string_z : 'error rt -> int -> (string, 'error) Rresult.result
