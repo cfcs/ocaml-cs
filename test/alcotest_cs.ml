@@ -26,9 +26,15 @@ let test_iteri_char () =
     (0x1 lor 0x20 lor 0x400) (!computed)
 
 let test_fold_char () =
-  Alcotest.(check @@ list char) "verify order and exhaustiveness"
+  Alcotest.(check @@ list char) "fold_char: verify order and exhaustiveness"
     ['d'; 'c'; 'b'; 'a'; 'x']
-    (Cs.fold_char (fun a c -> c::a) ['x'] (Cs.of_string "abcd"))
+    (Cs.fold_char (fun a c -> c::a) ['x'] (Cs.of_string "abcd")) ;
+  Alcotest.(check @@ list (pair int char))
+    "foldi_char: verify order and exhaustiveness"
+    [3, 'd'; 2, 'c'; 1, 'b'; 0, 'a'; -1, 'x']
+    (Cs.foldi_char (fun idx acc ch -> (idx,ch)::acc)
+       [-1,'x'] (Cs.of_string "abcd"))
+
 
 let test_map_char () =
   Alcotest.(check cs) "map_char |> of_list"

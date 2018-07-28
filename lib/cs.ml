@@ -33,6 +33,11 @@ let iteri_char (f: int -> char -> unit) cs =
 
 let iter_char f cs = iteri_char (fun _ -> f) cs
 
+let foldi_char f acc cs =
+  let acc = ref acc in
+  iteri_char (fun i c -> acc := f i !acc c) cs ;
+  !acc
+
 let fold_char f acc cs =
   let acc = ref acc in
   iter_char (fun c -> acc := f !acc c) cs ;
