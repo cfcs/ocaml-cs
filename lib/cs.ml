@@ -26,6 +26,13 @@ let make len c = String.make len c |> of_string
 let of_char c = make 1 c
 let empty = create 0
 
+let iteri_char (f: int -> char -> unit) cs =
+  for i = 0 to len cs - 1 do
+    f i (Cstruct.get_char cs i)
+  done
+
+let iter_char f cs = iteri_char (fun _ -> f) cs
+
 let map_char f (t:t) =
   let rec loop acc = function
     | -1 -> acc

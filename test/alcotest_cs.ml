@@ -17,6 +17,14 @@ let test_of_list () =
   Alcotest.(check cs) "of_list |> to_list"
     (Cs.of_list ['a';'b';'c']) @@ Cs.of_string "abc"
 
+let test_iteri_char () =
+  let computed = ref 0 in
+  let () = Cs.iteri_char (fun idx char ->
+      computed := !computed + (Char.code char lsl (4 * idx)))
+    @@ Cs.of_list [ '\x01'; '\x02'; '\x04' ] in
+  Alcotest.(check int) "verify exhaustiveness and that idx is correct"
+    (0x1 lor 0x20 lor 0x400) (!computed)
+
 let test_map_char () =
   Alcotest.(check cs) "map_char |> of_list"
     (Cs.of_list ['d';'e';'f'])
@@ -129,6 +137,7 @@ let test_tai64 () =
 let tests =
   [ "Cs.to_list", `Quick, test_to_list
   ; "Cs.of_list", `Quick, test_of_list
+  ; "Cs.iteri_char", `Quick, test_iteri_char
   ; "Cs.map_char", `Quick, test_map_char
   ; "Cs.empty", `Quick, test_empty
   ; "Cs.W", `Quick, test_cs_w
