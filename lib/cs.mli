@@ -18,6 +18,10 @@ val iteri_char : (int -> char -> unit) -> t -> unit
 val iter_char : (char -> unit) -> t -> unit
 (** [iter_char f cs] is {!iteri_char}[ f cs] where the [idx] is ignored.*)
 
+val fold_char : ('acc -> char -> 'acc) -> 'acc -> t -> 'acc
+(** [fold_char f accumulator cs] is [cs] folder over [f],
+    initialized with [accumulator].*)
+
 val map_char : (char -> 'a) -> t -> 'a list
 (** [map_char f t] is the equivalent of [Array.map] on an array of the
     chars contained in [t].*)
