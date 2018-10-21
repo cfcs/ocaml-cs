@@ -21,6 +21,120 @@ let exc_set_uint8 buf offset uint8 = Cstruct.set_uint8 buf offset uint8
 let exc_get_uint8 buf offset = Cstruct.get_uint8 buf offset
 let exc_get_char buf offset = Cstruct.get_char buf offset
 
+module Sensitive : sig
+  (** Best-effort sanitizing on finalisation, and avoiding the subset of
+      Cstruct that copies the underlying buffer, the goal being to avoid
+      leaving sensitive values in the heap.*)
+
+  type t
+  val init : int -> (int -> char) -> t
+  val make : int -> char -> t
+  val create : int -> t
+  val to_bytes : t -> bytes
+  val to_string : t -> string
+  (**  *)
+  val equal : t -> t -> bool (** {!Cstruct.equal} *)
+  val compare : t -> t -> int (** {!Cstruct.compare} *)
+  val set_char : t -> int -> char -> unit (** {!Cstruct.set_char} *)
+  val set_uint8 : t -> int -> int -> unit (** {!Cstruct.set_uint8} *)
+  val get_char : t -> int -> char (** {!Cstruct.get_char} *)
+  val get_uint8 : t -> int -> int (** {!Cstruct.get_uint8} *)
+  val substring : t -> int -> int -> string
+  (** [substring t offset len] is a substring of [len] bytes from [t],
+      starting at [offset].
+      The garbage collector (GC) is hooked in an attempt to clear the
+      newly allocated string on finalization.
+      @raise Invalid_argument if [offset] and [len] do not designate a
+      valid segment of [t].
+  *)
+  val subbytes : t -> int -> int -> bytes
+  (** [subbytes t offset len] is the [Bytes.t] equivalent to {!substring}*)
+  val copy : t -> int -> int -> string
+  (** [copy] is an alias for {!substring}.
+      It is provided for compatibility with code relying on {!Cstruct.copy}. *)
+  val sub : t -> int -> int -> t
+  (** [sub t offset len] is a substring of [t] sharing the underlying buffer.
+      It is an alias for {!Cstruct.sub}.*)
+  val blit : t -> int -> t -> int -> int -> unit (** {!Cstruct.blit} *)
+  val lenv : t list -> int (** {!Cstruct.lenv} *)
+  module BE : sig
+    (** See {!Cstruct.BE} *)
+    val get_uint16 : t -> int -> Cstruct.uint16
+    val get_uint32 : t -> int -> Cstruct.uint32
+    val get_uint64 : t -> int -> Cstruct.uint64
+    val set_uint16 : t -> int -> Cstruct.uint16 -> unit
+    val set_uint32 : t -> int -> Cstruct.uint32 -> unit
+    val set_uint64 : t -> int -> Cstruct.uint64 -> unit
+  end
+  module LE : sig
+    (** See {!Cstruct.BE} *)
+    val get_uint16 : t -> int -> Cstruct.uint16
+    val get_uint32 : t -> int -> Cstruct.uint32
+    val get_uint64 : t -> int -> Cstruct.uint64
+    val set_uint16 : t -> int -> Cstruct.uint16 -> unit
+    val set_uint32 : t -> int -> Cstruct.uint32 -> unit
+    val set_uint64 : t -> int -> Cstruct.uint64 -> unit
+  end
+end = struct
+  type t = Cstruct.t
+
+  let cstruct_clear_on_finalize (t:t) =
+    Gc.finalise (fun cs -> Cstruct.memset cs 0) t
+
+  let init len f =
+    let cs = Cstruct.create_unsafe len in
+    cstruct_clear_on_finalize cs ;
+    for idx = 0 to len -1 do
+      Cstruct.set_char cs idx (f idx)
+    done ;
+    cs
+
+  let make len ch = init len (fun _ -> ch)
+
+  let create len = make len '\000'
+
+  let bytes_clear_on_finalize live =
+    live |>
+    Gc.finalise (fun dead -> Bytes.fill dead 0 (Bytes.length dead) '\x01')
+
+  let to_bytes t =
+    let buf = Bytes.create (Cstruct.len t) in
+    (* Try to clear this on finalisation too: *)
+    bytes_clear_on_finalize buf;
+    Cstruct.blit_to_bytes t 0 buf 0 (Cstruct.len t);
+    buf
+
+  let to_string t =
+    Bytes.unsafe_to_string (to_bytes t)
+
+  let substring t off len =
+    let x = Cstruct.copy t off len in
+    Bytes.unsafe_of_string x |> bytes_clear_on_finalize ;
+    x
+
+  let copy = substring
+
+  let subbytes t off len =
+    substring t off len |> Bytes.unsafe_of_string
+
+  let equal = Cstruct.equal
+  let compare = Cstruct.compare
+  let check_bounds = Cstruct.check_bounds
+  let check_alignment = Cstruct.check_alignment
+
+  let blit = Cstruct.blit
+
+  (* we can't guarantee cleanup of these intermediate values: *)
+  let set_char = Cstruct.set_char
+  let set_uint8 = Cstruct.set_uint8
+  let get_char = Cstruct.get_char
+  let get_uint8 = Cstruct.get_uint8
+  let sub = Cstruct.sub
+  let lenv = Cstruct.lenv
+  module BE = Cstruct.BE
+  module LE = Cstruct.LE
+end
+
 let init len f = String.init len f |> of_string
 let make len c = String.make len c |> of_string
 let of_char c = make 1 c
