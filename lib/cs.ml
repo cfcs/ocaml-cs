@@ -559,3 +559,102 @@ struct
   let string_z r len = cs r len >>| strip_trailing_char '\x00' >>| to_string
   let equal_string r s = cs r (String.length s) >>= e_equal_string r.err s
 end
+
+module AnnotR = struct
+
+  type operation =
+    | O_char
+    | O_uint8
+    | O_uint16
+    | O_uint32
+    | O_uint64
+    | O_cs
+    | O_string
+    | O_stringz
+
+  type entry =
+    | Section of section
+    | Entry of annotation
+    | Product of unit Fmt.t
+  and section =
+    { header: unit Fmt.t;
+      entries : entry Queue.t;
+      parent: section ;
+    }
+  and annotation = {
+      op: operation;
+      pp: (Format.formatter -> operation -> unit);
+      off: int;
+      len: int;
+    }
+
+  type state = {
+    rt: entry Queue.t R.rt ;
+    root : section ;
+    current: section ref ;
+  }
+
+  type 'ok retval = ('ok, state) Rresult.result
+
+  (*let pp ppf state =
+    Queue.iter (function
+          Entry -annot ->
+        Fmt.pf ppf "%a" annot.pp annot.op
+      ) state.root.entries*)
+
+  (* Initialization functions *)
+  let of_cs = R.of_cs
+  let of_string = R.of_string
+
+  (* Read-only *)
+  let len = R.len
+
+  let annotate_section ~pp (state:state) =
+    let this = {entries = Queue.create () ;
+                parent = !(state.current) ;
+                header = pp; } in
+    Queue.push (Section this) !(state.current).entries ;
+    state.current := this
+
+  let exit_section ~pp state =
+    Queue.push (Product pp) !(state.current).entries ;
+    state.current := !(state.current).parent
+
+  let annotate ~pp ~pp_error (state:state) operation cb : 'a retval =
+    let orig_off = state.rt.R.off in
+    let retval = cb state.rt in
+    begin match retval with
+      | Error _ -> Error state
+      | Ok retval ->
+        let len = state.rt.R.off - orig_off in
+        Queue.add (Entry {
+          off = orig_off ;
+          len ;
+          op = operation ;
+          pp ;
+        }) !(state.current).entries ;
+        Ok retval
+    end
+
+  let char ~pp ~pp_error state =
+    annotate ~pp ~pp_error state O_char R.char
+
+  let uint8 ~pp ~pp_error state =
+    annotate ~pp ~pp_error state O_uint8 R.uint8
+
+  let uint16 ~pp ~pp_error state =
+    annotate ~pp ~pp_error state O_uint16 R.uint16
+  let uint32 ~pp ~pp_error state =
+    annotate ~pp ~pp_error state O_uint32 R.uint32
+  let uint64 ~pp ~pp_error state =
+    annotate ~pp ~pp_error state O_uint64 R.uint64
+
+  let cs ~pp ~pp_error state len =
+    annotate ~pp ~pp_error state O_cs (fun x -> R.cs x len)
+
+  let string ~pp ~pp_error state len =
+    annotate ~pp ~pp_error state O_string (fun x -> R.string x len)
+
+  let string_z ~pp ~pp_error state len =
+    annotate ~pp ~pp_error state O_string (fun x -> R.string_z x len)
+end

@@ -5,7 +5,7 @@ val to_cstruct : t -> Cstruct.t
 val pp_hex : Format.formatter -> t -> unit
 val empty : t
 val to_string : t -> string
-val of_string : ?allocator:(int -> t) -> string -> t
+val of_string : ?allocator:(int -> t) -> ?off:int -> ?len:int -> string -> t
 val init : int -> (int -> char) -> t
 val make : int -> char -> t
 
